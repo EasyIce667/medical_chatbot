@@ -4,3 +4,4 @@ __pycache__/
 *.faiss
 *.pkl
 .env
+test_api.py
