@@ -14,13 +14,12 @@ HUGGINGFACE_REPO_ID = "mistralai/Mistral-7B-Instruct-v0.3"
 def load_llm(huggingface_repo_id):
     llm = HuggingFaceEndpoint(
         repo_id=huggingface_repo_id,
-        temperature=0.9,
+        temperature=0.5,
         huggingfacehub_api_token=HF_TOKEN,
         max_new_tokens=512
     )
     chat_llm = ChatHuggingFace(llm=llm)  # Wrap for conversational task
     return chat_llm
-# Previous errors showed that the mistralai/Mistral-7B-Instruct-v0.3 model (and later google/gemma-2-9b-it) was only supported for the conversational task by the provider (e.g., Novita or Nebius), not text-generation. The HuggingFaceEndpoint class defaults to the text_generation method, which caused the ValueError: Model ... is not supported for task text-generation. Wrapping the endpoint in ChatHuggingFace switches to the chat_completion method, aligning with the provider’s supported conversational task.
 
 # Step 2: Connect LLM with FAISS and Create chain
 CUSTOM_SYSTEM_PROMPT = """
@@ -36,6 +35,7 @@ Question: {question}
 """
 
 def set_custom_prompt():
+    # Fixed: Ensure input_variables includes 'context' and 'question'
     prompt = ChatPromptTemplate.from_messages([
         SystemMessagePromptTemplate.from_template(CUSTOM_SYSTEM_PROMPT),
         HumanMessagePromptTemplate.from_template(CUSTOM_HUMAN_PROMPT)
