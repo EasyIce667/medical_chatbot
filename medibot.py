@@ -80,7 +80,6 @@ def main():
             result = response["result"]
             source_documents = response["source_documents"]
 
-            # Show answer
             st.chat_message('assistant').markdown(result)
 
             # Collapsible expander for source documents
