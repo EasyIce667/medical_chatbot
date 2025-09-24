@@ -26,7 +26,7 @@ def set_custom_prompt(custom_prompt_template):
 def load_llm(huggingface_repo_id, HF_TOKEN):
     llm = HuggingFaceEndpoint(
         repo_id=huggingface_repo_id,
-        temperature=0.9,
+        temperature=0.8,
         model_kwargs={"token": HF_TOKEN,"max_new_tokens": "512"}
     )
     return llm
