@@ -4,7 +4,7 @@ A Streamlit-based medical chatbot application that leverages LangChain, HuggingF
 
 ## Overview
 
-This project implements a medical chatbot that uses natural language processing to answer user queries by retrieving relevant information from a vectorized database of medical documents. The application is built using Python, Streamlit, and integrates with HuggingFace models for language understanding.
+This project implements a medical chatbot that uses natural language processing to answer user queries by retrieving relevant information from a vectorized database of medical documents. The application is built using Python, Streamlit, and integrates with HuggingFace models.
 
 ## About Medical Chatbot
 
