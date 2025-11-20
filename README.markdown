@@ -1,95 +1,142 @@
-# Medical Chatbot
+<div align="center">
 
-A Streamlit-based medical chatbot application that leverages LangChain, HuggingFace embeddings, and FAISS vector stores to provide answers based on medical document context.
+# 🩺 Medical Chatbot (RAG-based)
 
-## Overview
+Context-aware Q&A over a local medical knowledge base using FAISS vector search + HuggingFace or Groq-hosted LLMs.
 
-This project implements a medical chatbot that uses natural language processing to answer user queries by retrieving relevant information from a vectorized database of medical documents. The application is built using Python, Streamlit, and integrates with HuggingFace models.
+</div>
 
-## About Medical Chatbot
+## 🧠 Overview
+This project implements a Retrieval-Augmented Generation (RAG) pipeline that lets you ask medical questions grounded in a curated PDF knowledge base (e.g. an encyclopedia of medicine). Instead of hallucinating, the LLM is constrained by retrieved passages from a FAISS vector store built from your documents.
 
-### What is Medical Chatbot?
+Two primary entry points:
+- `connect_mem_llm.py` – CLI prototype using a HuggingFace Inference endpoint (e.g. Mistral 7B Instruct).
+- `medi.py` – Streamlit chat UI using a Groq-hosted model (Llama 4 Maverick) with retrieval.
 
-The Medical Chatbot is an innovative application designed to assist users by providing informed responses to medical-related queries. Built using Python, Streamlit, and advanced natural language processing techniques, this project leverages the power of LangChain, HuggingFace embeddings, and FAISS vector stores to create a knowledgeable and interactive chatbot.
+## ✨ Key Features
+- FAISS vector store for fast semantic retrieval
+- SentenceTransformer embeddings (`all-MiniLM-L6-v2`) – switchable to remote API mode
+- Modular prompt template injection
+- Groq or HuggingFace LLM backends
+- Source document traceability (shows which chunks supported the answer)
+- Caching of vector store + embeddings via Streamlit resource cache
 
-### Purpose and Functionality
+## 🏗 Architecture
+```
+PDF(s) --> Text Splitter --> Embeddings --> FAISS Index (vectorstore/db_faiss)
+								│
+User Query --> Retriever (top-k) ---------------┘
+			    │
+		    Prompt Assembly
+			    │
+		    LLM Generation (HF or Groq)
+			    │
+		    Answer + Source Chunks
+```
 
-This project aims to simplify access to medical information by allowing users to ask questions in natural language. The chatbot retrieves relevant data from a pre-processed database of medical documents, offering detailed answers and citing source references when available. It is particularly useful for educational purposes, quick reference, and understanding medical concepts without requiring deep expertise.
+### Main Components
+| File | Role |
+|------|------|
+| `create_mem_llm.py` | Builds FAISS index from PDFs (embedding + persist) | ->(basically creates memory for llm)
+| `connect_mem_llm.py` | CLI RAG query using HuggingFaceEndpoint | ->(connects memory with llm)
+| `medi.py` | Streamlit chat interface using Groq Chat model + FAISS retrieval |
+| `vectorstore/db_faiss` | Persisted FAISS index (created beforehand) |
+| `data/` | PDF source documents |
 
-#### Key Features:
+## 🔐 Environment Variables
+Create a `.env` file :
+```
+HF_TOKEN=hf_xxxxxxxxxxxxxxxxxxxxxxxxx
+GROQ_API_KEY=groq_xxxxxxxxxxxxxxxxxxx
+```
 
-- **Natural Language Querying**: Users can type questions in plain English to get responses.
-- **Document-Based Knowledge**: Powered by a vectorized database of PDF medical documents.
-- **Source Attribution**: Provides references to source documents for transparency.
-- **User-Friendly Interface**: Built with Streamlit for an intuitive web-based experience.
+Optional (future expansion):
+```
+EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+HUGGINGFACE_REPO_ID=mistralai/Mistral-7B-Instruct-v0.3
+```
 
-### How It Works
+## ⚙️ Installation
+Use the provided `requirements.txt` 
 
-1. **Data Preparation**: Medical documents in PDF format are loaded and split into manageable chunks.
-2. **Vectorization**: The text chunks are converted into embeddings using HuggingFace's sentence-transformers and stored in a FAISS index.
-3. **Query Processing**: User queries are processed by a language model (e.g., LLaMA via Groq API) that retrieves relevant information from the vector store.
-4. **Response Generation**: The system generates a detailed response based on the context and displays it in the Streamlit interface.
+### 1. Create & Activate Virtual Environment
+```zsh
+python3 -m venv .venv
+source .venv/bin/activate
+```
 
-### Target Audience
+### 2. Install Dependencies
+```zsh
+pip install --upgrade pip
+pip install -r requirements.txt
+```
 
-- Medical students seeking quick references.
-- Healthcare professionals needing a tool for preliminary information.
-- General users interested in learning about medical topics.
+If using `uv`:
+```zsh
+uv sync
+```
 
-### Development and Future Scope
+### 3. Set Environment Variables
+```zsh
+export HF_TOKEN=hf_...yourtoken...
+export GROQ_API_KEY=groq_...yourtoken...
+```
+Or create a `.env` file and rely on `dotenv` where enabled.
 
-Developed as an open-source project, the Medical Chatbot is a work in progress. Future enhancements may include support for more languages, integration with real-time medical databases, and improved accuracy through advanced machine learning models.
+## 🗂 Building the Vector Store
+If you have not yet created `vectorstore/db_faiss`, run the memory creation script :
+```zsh
+python create_mem_llm.py or uv run create_mem_llm.py
+```
+This should:
+1. Load PDFs from `data/`
+2. Chunk text
+3. Embed chunks using `HuggingFaceEmbeddings`
+4. Persist FAISS index under `vectorstore/db_faiss`
 
-## Prerequisites
+If the file does not yet exist, implement a pipeline similar to:
+```python
+from langchain_community.document_loaders import PyPDFLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.vectorstores import FAISS
 
-- Python 3.8 or higher
-- Git (for cloning the repository)
+loader = PyPDFLoader("data/The_GALE_ENCYCLOPEDIA_of_MEDICINE_SECOND.pdf")
+docs = loader.load()
+splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150)
+chunks = splitter.split_documents(docs)
+emb = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+db = FAISS.from_documents(chunks, emb)
+db.save_local("vectorstore/db_faiss")
+```
 
-## Installation
+## 💬 Running the CLI Version
+```zsh
+source .venv/bin/activate
+export HF_TOKEN=...  # if not in .env
+python connect_mem_llm.py
+```
+Enter a query at the prompt: `How is hypertension managed?`
 
-1. Clone the repository:
+## 🖥 Running the Streamlit App
+```zsh
+source .venv/bin/activate
+export GROQ_API_KEY=groq_...  # if not in .env
+streamlit run medi.py or uv run streamlit run medi.py
+```
+Open the URL shown (default: http://localhost:8501) and start chatting.
 
-   ```bash
-   git clone https://github.com/EasyIce667/medical-chatbot.git
-   cd medical-chatbot
-   ```
 
-2. Install the required dependencies:
+## 🧱 Extending
+- Add multi-PDF ingestion (glob over `data/*.pdf`)
+- Enable streaming tokens in UI
+- Add OpenAI / Anthropic backend abstraction
+- Persist chat history with sources
+- Add evaluation harness (e.g. RAGAS) for answer faithfulness
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+## ⚖️ Disclaimer
+This tool is for educational and reference purposes only. It does **not** provide medical advice, diagnosis, or treatment recommendations. Always consult a licensed healthcare professional for medical decisions.
 
-3. Set up environment variables:
 
-   - Create a `.env` file in the root directory.
-   - Add your HuggingFace token and GROQ API key:
-     ```
-     HF_TOKEN=your_huggingface_token
-     GROQ_API_KEY=your_groq_api_key
-     ```
 
-4. Prepare the vector database:
-   - Place your PDF medical documents in the `data/` directory.
-   - Run the `create_mem_llm.py` script to generate the FAISS vector store:
-     ```bash
-     python create_mem_llm.py
-     ```
 
-## Usage
-
-1. Run the Streamlit app:
-
-   ```bash
-   streamlit run medibot.py
-   ```
-
-2. Open your browser and navigate to `http://localhost:xxxx`.
-3. Enter your medical-related queries in the chat interface and explore the responses.
-
-## Files
-
-- `medibot.py`: Main application file using Streamlit and LangChain.
-- `create_mem_llm.py`: Script to load PDFs and create the FAISS vector store.
-- `connect_mem_to_llm.py`: Example of connecting the LLM with the FAISS database.
-- `requirements.txt`: List of dependencies required for the project.
