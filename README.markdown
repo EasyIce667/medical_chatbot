@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🩺 Medical Chatbot (RAG-based)
+# 🩺 AI Medical Chatbot (RAG-based)
 
 Context-aware Q&A over a local medical knowledge base using FAISS vector search + HuggingFace or Groq-hosted LLMs.
 
